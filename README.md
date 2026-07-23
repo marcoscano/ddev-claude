@@ -30,6 +30,13 @@ This fork ([marcoscano/ddev-claude](https://github.com/marcoscano/ddev-claude)) 
    `IS_DDEV_PROJECT=true` in the environment, and the internal `db` service
    in the default whitelist, so `vendor/bin/drush` fully bootstraps against
    the DDEV database out of the box.
+7. **Self-diagnosing database connection failures** -- a PostToolUse hook
+   (`db-conn-check.sh`) detects MySQL/PostgreSQL connection errors in Bash
+   tool output, probes whether the db container is reachable, and injects
+   fix instructions into the agent context (whitelist the current db IP via
+   `add-domain <ip>.sslip.io`). Without it, a stale firewall entry after a
+   docker network change looks like a generic "database is down" error and
+   agents troubleshoot the wrong layer.
 
 To switch a project from upstream to this fork, remove the old install first
 and delete anything left behind -- DDEV never removes or overwrites files

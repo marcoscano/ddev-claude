@@ -20,6 +20,7 @@ error() { echo "$LOG_PREFIX ERROR: $*" >&2; }
 SETTINGS_FILE="${DDEV_APPROOT}/.claude/settings.local.json"
 HOOK_COMMAND_URL="/opt/ddev-claude/hooks/url-check.sh"
 HOOK_COMMAND_SECRET="/opt/ddev-claude/hooks/secret-check.sh"
+HOOK_COMMAND_DB="/opt/ddev-claude/hooks/db-conn-check.sh"
 
 # Hook configs to inject — commands are conditional so they no-op on the host
 HOOK_CONFIG_URL=$(cat <<'HOOKJSON'
@@ -48,6 +49,19 @@ HOOK_CONFIG_SECRET=$(cat <<'HOOKJSON'
 HOOKJSON
 )
 
+HOOK_CONFIG_DB=$(cat <<'HOOKJSON'
+{
+  "matcher": "Bash",
+  "hooks": [
+    {
+      "type": "command",
+      "command": "test -f /opt/ddev-claude/hooks/db-conn-check.sh && /opt/ddev-claude/hooks/db-conn-check.sh || exit 0"
+    }
+  ]
+}
+HOOKJSON
+)
+
 # Read existing settings (or empty object)
 if [[ -f "$SETTINGS_FILE" ]]; then
     if ! existing=$(jq '.' "$SETTINGS_FILE" 2>/dev/null); then
@@ -61,6 +75,7 @@ fi
 # Check which hooks need registration (idempotent)
 needs_url=true
 needs_secret=true
+needs_db=true
 
 if echo "$existing" | jq -e --arg cmd "$HOOK_COMMAND_URL" \
     '.hooks.PreToolUse // [] | map(.hooks // []) | flatten | map(select(.command | contains($cmd))) | length > 0' \
@@ -74,7 +89,13 @@ if echo "$existing" | jq -e --arg cmd "$HOOK_COMMAND_SECRET" \
     needs_secret=false
 fi
 
-if [[ "$needs_url" == "false" && "$needs_secret" == "false" ]]; then
+if echo "$existing" | jq -e --arg cmd "$HOOK_COMMAND_DB" \
+    '.hooks.PostToolUse // [] | map(.hooks // []) | flatten | map(select(.command | contains($cmd))) | length > 0' \
+    > /dev/null 2>&1; then
+    needs_db=false
+fi
+
+if [[ "$needs_url" == "false" && "$needs_secret" == "false" && "$needs_db" == "false" ]]; then
     log "Hooks already registered in settings.local.json"
     exit 0
 fi
@@ -103,9 +124,18 @@ if [[ "$needs_secret" == "true" ]]; then
     log "Adding secret-check hook"
 fi
 
+if [[ "$needs_db" == "true" ]]; then
+    merged=$(echo "$merged" | jq --argjson hook "$HOOK_CONFIG_DB" '
+        .hooks //= {} |
+        .hooks.PostToolUse //= [] |
+        .hooks.PostToolUse += [$hook]
+    ')
+    log "Adding db-conn-check hook"
+fi
+
 # Write back (atomic)
 tmp_settings=$(mktemp)
 echo "$merged" > "$tmp_settings"
 mv "$tmp_settings" "$SETTINGS_FILE"
 
-log "Registered PreToolUse hooks in settings.local.json"
+log "Registered hooks in settings.local.json"

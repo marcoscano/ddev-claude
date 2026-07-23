@@ -76,3 +76,17 @@ teardown() {
   [ "$status" -eq 0 ]
   [ "$output" -eq 2 ]
 }
+
+@test "generate-settings registers db-conn-check PostToolUse hook" {
+  run bash "$REPO_ROOT/claude/scripts/generate-settings.sh"
+  [ "$status" -eq 0 ]
+
+  run jq -r '.hooks.PostToolUse[].hooks[].command' "$DDEV_APPROOT/.claude/settings.local.json"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"test -f /opt/ddev-claude/hooks/db-conn-check.sh"* ]]
+  [[ "$output" == *"|| exit 0"* ]]
+
+  run jq '.hooks.PostToolUse | length' "$DDEV_APPROOT/.claude/settings.local.json"
+  [ "$status" -eq 0 ]
+  [ "$output" -eq 1 ]
+}

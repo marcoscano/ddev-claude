@@ -91,3 +91,52 @@ run_secret_hook() {
   [ "$status" -eq 0 ]
   [[ "$output" == *'"permissionDecision": "allow"'* ]]
 }
+
+run_db_hook() {
+  local payload="$1"
+  run bash -c 'printf "%s" "$1" | bash "$2"' _ "$payload" "$REPO_ROOT/claude/hooks/db-conn-check.sh"
+}
+
+@test "db hook ignores non-Bash tools" {
+  run_db_hook '{"tool_name":"Read","tool_input":{"file_path":"README.md"},"tool_response":"SQLSTATE[HY000] [2002] Connection timed out"}'
+
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "db hook ignores Bash output without database error" {
+  run_db_hook '{"tool_name":"Bash","tool_input":{"command":"drush cr"},"tool_response":{"stdout":"Cache rebuild complete.","stderr":""}}'
+
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "db hook is quiet when firewall is disabled" {
+  DDEV_CLAUDE_NO_FIREWALL=1 run bash -c 'printf "%s" "$1" | DDEV_CLAUDE_NO_FIREWALL=1 bash "$2"' _ \
+    '{"tool_name":"Bash","tool_input":{"command":"drush cr"},"tool_response":{"stderr":"SQLSTATE[HY000] [2002] Connection timed out"}}' \
+    "$REPO_ROOT/claude/hooks/db-conn-check.sh"
+
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "db hook reports unresolvable db host on mysql error" {
+  DDEV_CLAUDE_DB_HOST=nonexistent-db-host-xyz run bash -c 'printf "%s" "$1" | DDEV_CLAUDE_DB_HOST=nonexistent-db-host-xyz bash "$2"' _ \
+    '{"tool_name":"Bash","tool_input":{"command":"drush cr"},"tool_response":{"stderr":"SQLSTATE[HY000] [2002] Connection timed out"}}' \
+    "$REPO_ROOT/claude/hooks/db-conn-check.sh"
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *'"additionalContext"'* ]]
+  [[ "$output" == *'does not resolve'* ]]
+}
+
+@test "db hook instructs firewall whitelisting when db port is blocked" {
+  DDEV_CLAUDE_DB_HOST=localhost run bash -c 'printf "%s" "$1" | DDEV_CLAUDE_DB_HOST=localhost bash "$2"' _ \
+    '{"tool_name":"Bash","tool_input":{"command":"drush cr"},"tool_response":{"stderr":"SQLSTATE[HY000] [2002] Connection timed out"}}' \
+    "$REPO_ROOT/claude/hooks/db-conn-check.sh"
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *'"additionalContext"'* ]]
+  [[ "$output" == *'add-domain'* ]]
+  [[ "$output" == *'.sslip.io'* ]]
+}
