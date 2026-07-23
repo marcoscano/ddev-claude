@@ -1,7 +1,10 @@
 #!/bin/bash
-#ddev-generated
 #
 # merge-denylist.sh - Merge multiple denylist JSON files into pattern cache files
+# (local fix 2026-07-23: chmod the caches world-readable — mktemp creates them
+# 0600, and when root's entrypoint writes them the claude-user hook can't read
+# the deny patterns and silently allows secret files; exec bit also restored,
+# the file ships 0644 upstream; #ddev-generated marker removed to protect it)
 #
 # Usage: merge-denylist.sh [global_config] [project_config]
 #
@@ -109,6 +112,7 @@ if [[ -n "$allow_output" ]]; then
 else
     : > "$tmp_allow"
 fi
+chmod 644 "$tmp_deny" "$tmp_allow"
 mv "$tmp_deny" "$DENY_CACHE"
 mv "$tmp_allow" "$ALLOW_CACHE"
 

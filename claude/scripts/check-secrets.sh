@@ -1,7 +1,8 @@
 #!/bin/bash
-#ddev-generated
 #
 # check-secrets.sh - Scan project for secret files at startup
+# (local fix 2026-07-23: exec bit restored, the file ships 0644 upstream so the
+# boot-time scan never ran; #ddev-generated marker removed to protect it)
 #
 # Runs at boot after hook registration. Scans the project directory for files
 # matching deny patterns and outputs a visible warning listing detected files.
