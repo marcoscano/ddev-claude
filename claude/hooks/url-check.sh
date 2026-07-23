@@ -1,7 +1,8 @@
 #!/bin/bash
-#ddev-generated
 #
 # url-check.sh - PreToolUse hook for domain whitelist checking
+# (local fix 2026-07-23: emit hookSpecificOutput schema so Claude Code
+# honors the decisions; #ddev-generated marker removed to protect it)
 #
 # Reads Claude Code hook JSON from stdin, extracts domains from tool calls,
 # and checks them against the merged whitelist cache. Returns allow/deny
@@ -111,7 +112,7 @@ domains_output=$(extract_domains)
 
 # Special case: add-domain command gets explicit allow
 if [[ "$domains_output" == "__ALLOW_ADD_DOMAIN__" ]]; then
-    jq -n '{permissionDecision: "allow"}'
+    jq -n '{hookSpecificOutput: {hookEventName: "PreToolUse", permissionDecision: "allow"}}'
     exit 0
 fi
 
@@ -130,7 +131,7 @@ done <<< "$domains_output"
 
 # All domains whitelisted
 if [[ ${#blocked_domains[@]} -eq 0 ]]; then
-    jq -n '{permissionDecision: "allow"}'
+    jq -n '{hookSpecificOutput: {hookEventName: "PreToolUse", permissionDecision: "allow"}}'
     exit 0
 fi
 
@@ -145,5 +146,6 @@ If yes, run: ${add_cmd}
 EOF
 )
 
-jq -n --arg reason "$deny_reason" '{permissionDecision: "deny", message: $reason}'
+jq -n --arg reason "$deny_reason" \
+    '{hookSpecificOutput: {hookEventName: "PreToolUse", permissionDecision: "deny", permissionDecisionReason: $reason}}'
 exit 0

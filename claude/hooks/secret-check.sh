@@ -1,7 +1,8 @@
 #!/bin/bash
-#ddev-generated
 #
 # secret-check.sh - PreToolUse hook for secret file protection
+# (local fix 2026-07-23: emit hookSpecificOutput schema so Claude Code
+# honors the decisions; #ddev-generated marker removed to protect it)
 #
 # Reads Claude Code hook JSON from stdin, extracts file paths from tool calls,
 # and checks them against the merged denylist cache. Returns allow/deny
@@ -39,7 +40,7 @@ if [[ ! -f "$DENY_CACHE" || ! -f "$ALLOW_CACHE" ]]; then
     fi
     if [[ ! -f "$DENY_CACHE" ]]; then
         # Cache still missing — fail closed (deny all file operations)
-        jq -n '{permissionDecision: "deny", message: "Secret protection cache unavailable — blocking file access as a safety measure. Try restarting the container."}'
+        jq -n '{hookSpecificOutput: {hookEventName: "PreToolUse", permissionDecision: "deny", permissionDecisionReason: "Secret protection cache unavailable — blocking file access as a safety measure. Try restarting the container."}}'
         exit 0
     fi
     if [[ ! -f "$ALLOW_CACHE" ]]; then
@@ -117,7 +118,8 @@ This file matches a secret/credential pattern in the denylist.
 Ask the user if they'd like to grant temporary access for this session.
 If yes, run: /opt/ddev-claude/bin/exempt-secret ${file_path}"
 
-    jq -n --arg reason "$deny_reason" '{permissionDecision: "deny", message: $reason}'
+    jq -n --arg reason "$deny_reason" \
+        '{hookSpecificOutput: {hookEventName: "PreToolUse", permissionDecision: "deny", permissionDecisionReason: $reason}}'
     exit 0
 }
 
@@ -140,7 +142,7 @@ case "$tool_name" in
         # Special-case: allow exempt-secret when it's the sole command
         # Anchored start and end; reject shell metacharacters to prevent chaining
         if echo "$cmd" | grep -qE '^\s*/opt/ddev-claude/bin/exempt-secret\s+[^ ;|&$()`]+(\s+[^ ;|&$()`]+)*\s*$'; then
-            jq -n '{permissionDecision: "allow"}'
+            jq -n '{hookSpecificOutput: {hookEventName: "PreToolUse", permissionDecision: "allow"}}'
             exit 0
         fi
 
