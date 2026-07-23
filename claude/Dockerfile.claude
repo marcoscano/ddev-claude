@@ -16,6 +16,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     php-xml \
     php-curl \
     php-zip \
+    # Required so drush can reach the DDEV database from this container.
+    php-mysql \
     # Firewall tools
     iptables \
     ipset \

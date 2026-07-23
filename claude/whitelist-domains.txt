@@ -1,4 +1,8 @@
 #ddev-generated
+# DDEV internal services (resolved via docker DNS; the ACCEPT rule matches
+# whitelisted IPs on any port, so this opens e.g. db:3306 for drush)
+db
+
 # Claude API
 api.anthropic.com
 claude.ai

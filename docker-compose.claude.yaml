@@ -57,6 +57,9 @@ services:
     environment:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - DDEV_APPROOT=${DDEV_APPROOT}
+      # Make Drupal's settings.php include settings.ddev.php (DB credentials
+      # etc.) so drush and other CLI tools work inside this container.
+      - IS_DDEV_PROJECT=true
       - CLAUDE_USER=claude
       - CLAUDE_HOME=/home/claude
 
