@@ -2,6 +2,49 @@
 
 A DDEV addon that runs [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) in a sandboxed container with a whitelist-based network firewall. Run `--dangerously-skip-permissions` with confidence -- the firewall blocks all unauthorized outbound traffic, neutralizing prompt injection data exfiltration.
 
+## About this fork
+
+This fork ([marcoscano/ddev-claude](https://github.com/marcoscano/ddev-claude)) carries the following changes on top of [florianriquelme/ddev-claude](https://github.com/florianriquelme/ddev-claude), one commit each. Detailed write-ups with reproduction steps live in the linked upstream issues.
+
+1. **PreToolUse hooks emit Claude Code-compatible JSON** -- the domain
+   approval flow and secret protection were silent no-ops because the hooks
+   used a JSON schema Claude Code does not recognize
+   ([upstream #10](https://github.com/FlorianRiquelme/ddev-claude/issues/10)).
+2. **Whitelist cache written world-readable** -- after the root watcher
+   regenerated the mktemp (0600) cache, the non-root URL hook failed closed
+   and denied every domain
+   ([upstream #11](https://github.com/FlorianRiquelme/ddev-claude/issues/11)).
+3. **add-domain updates reach the firewall watcher** -- mv-into-place emits
+   no inotify event on DDEV mounts (the watcher never reloaded), and `set -e`
+   aborted the domain loop on the expected non-root ipset failure
+   ([upstream #12](https://github.com/FlorianRiquelme/ddev-claude/issues/12)).
+4. **Secret-protection scripts shipped executable, caches readable** -- the
+   secret cache could never be built ("Secret protection cache unavailable"),
+   and an unreadable deny cache made the hook fail open
+   ([upstream #13](https://github.com/FlorianRiquelme/ddev-claude/issues/13)).
+5. **Periodic firewall whitelist refresh** -- ipset entries expire after
+   3600s but were only re-resolved on config changes, so after 1h of uptime
+   all egress silently dropped
+   ([upstream #9](https://github.com/FlorianRiquelme/ddev-claude/issues/9)).
+6. **Drush database access from the sandbox** -- `php-mysql` in the image,
+   `IS_DDEV_PROJECT=true` in the environment, and the internal `db` service
+   in the default whitelist, so `vendor/bin/drush` fully bootstraps against
+   the DDEV database out of the box.
+
+To switch a project from upstream to this fork, remove the old install first
+and delete anything left behind -- DDEV never removes or overwrites files
+whose `#ddev-generated` marker was stripped (e.g. by hand-applied fixes), so
+a clean slate avoids install warnings:
+
+```bash
+ddev add-on remove ddev-claude
+rm -rf .ddev/claude .ddev/docker-compose.claude_refresh.yaml
+ddev add-on get marcoscano/ddev-claude --version main
+ddev restart
+```
+
+(`--version main` is needed until this fork publishes a release.)
+
 ## Why You Need This
 
 Claude Code's `--dangerously-skip-permissions` flag unlocks autonomous mode: Claude can edit files, run commands, and install packages without asking. This is powerful but risky. A prompt injection hidden in a file Claude reads could instruct it to exfiltrate your code, secrets, or credentials to an attacker-controlled server.
@@ -18,7 +61,7 @@ Your web container is completely unaffected.
 ## Installation
 
 ```bash
-ddev get florianriquelme/ddev-claude
+ddev add-on get marcoscano/ddev-claude --version main
 ddev restart
 ```
 
