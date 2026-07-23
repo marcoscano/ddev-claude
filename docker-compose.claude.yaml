@@ -11,7 +11,20 @@ services:
       - NET_RAW
 
     entrypoint: ["${DDEV_APPROOT}/.ddev/claude/entrypoint.sh"]
-    command: ["tail", "-f", "/dev/null"]
+    # Keep-alive that also re-resolves the firewall whitelist periodically:
+    # ipset entries are added with a 3600s timeout but are only re-resolved
+    # when a whitelist file changes, so after 1h of uptime all egress would
+    # silently drop. Re-adding entries resets their TTL.
+    command:
+      - bash
+      - -c
+      - |
+        echo "[ddev-claude] Whitelist refresh loop active (every 1800s)"
+        while true; do
+          sleep 1800
+          "${DDEV_APPROOT}/.ddev/claude/scripts/reload-whitelist.sh" \
+            || echo "[ddev-claude] WARNING: whitelist reload failed; retrying in 1800s"
+        done
 
     volumes:
       - type: bind
