@@ -1,7 +1,9 @@
 #!/bin/bash
-#ddev-generated
 #
 # merge-whitelist.sh - Merge multiple whitelist JSON files into line-delimited domains
+# (local fix 2026-07-23: chmod the cache world-readable — mktemp creates it 0600,
+# and when root's watcher writes it the claude-user hook can't read it and denies
+# every domain; #ddev-generated marker removed to protect the fix)
 #
 # Usage: merge-whitelist.sh [global_config] [project_config]
 #
@@ -70,4 +72,5 @@ merged_output=$(printf '%s\n' "${sources[@]}" | jq -s 'add | unique | .[]' -r)
 echo "$merged_output"
 tmp_cache=$(mktemp)
 echo "$merged_output" > "$tmp_cache"
+chmod 644 "$tmp_cache"
 mv "$tmp_cache" "$CACHE_FILE"
