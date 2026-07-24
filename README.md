@@ -37,6 +37,19 @@ This fork ([marcoscano/ddev-claude](https://github.com/marcoscano/ddev-claude)) 
    `add-domain <ip>.sslip.io`). Without it, a stale firewall entry after a
    docker network change looks like a generic "database is down" error and
    agents troubleshoot the wrong layer.
+8. **Drush site aliases work out of the box** -- four fixes in one commit:
+   the image installs PHP matching the project's `php_version` via
+   deb.sury.org (Debian bookworm only ships 8.2, which fails Composer's
+   platform check on newer projects); the project is additionally mounted
+   at `/var/www/html` (with the same `.env` masking) so aliases whose
+   `root:` points at the web container's docroot resolve identically, and
+   absolute paths baked into DB-shared caches stay consistent with the web
+   container; `/var/www/html/vendor/bin` is appended to `PATH` so bare
+   `drush` resolves; and `DDEV_PHP_VERSION` is exported so settings files
+   detect in-container execution. Also repairs change 6: `db` now lives in
+   `default-whitelist.json`, the file `merge-whitelist.sh` actually reads
+   -- it had been added to `whitelist-domains.txt`, a vestigial file the
+   firewall never consumes (now removed).
 
 To switch a project from upstream to this fork, remove the old install first
 and delete anything left behind -- DDEV never removes or overwrites files

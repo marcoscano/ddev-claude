@@ -1,6 +1,11 @@
 #ddev-generated
 FROM debian:bookworm-slim
 
+# PHP version for the CLI runtime in this container. DDEV passes the
+# project's php_version from docker-compose.claude.yaml so drush, composer
+# and other PHP tools run on the same version as the web container.
+ARG PHP_VERSION=8.3
+
 # Install system packages in single layer
 RUN apt-get update && apt-get install -y --no-install-recommends \
     # Development tools
@@ -10,14 +15,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     unzip \
     ca-certificates \
     gnupg \
-    # PHP
-    php-cli \
-    php-mbstring \
-    php-xml \
-    php-curl \
-    php-zip \
-    # Required so drush can reach the DDEV database from this container.
-    php-mysql \
     # Firewall tools
     iptables \
     ipset \
@@ -27,6 +24,23 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     # Configuration tools
     jq \
     inotify-tools \
+    && rm -rf /var/lib/apt/lists/*
+
+# PHP from deb.sury.org: Debian bookworm only ships PHP 8.2, which fails
+# Composer's platform check on projects that require a newer version.
+RUN curl -fsSL https://packages.sury.org/php/apt.gpg -o /usr/share/keyrings/deb.sury.org-php.gpg \
+    && echo "deb [signed-by=/usr/share/keyrings/deb.sury.org-php.gpg] https://packages.sury.org/php/ bookworm main" > /etc/apt/sources.list.d/sury-php.list \
+    && apt-get update && apt-get install -y --no-install-recommends \
+    php${PHP_VERSION}-cli \
+    php${PHP_VERSION}-mbstring \
+    php${PHP_VERSION}-xml \
+    php${PHP_VERSION}-curl \
+    php${PHP_VERSION}-zip \
+    php${PHP_VERSION}-gd \
+    php${PHP_VERSION}-intl \
+    php${PHP_VERSION}-bcmath \
+    # Required so drush can reach the DDEV database from this container.
+    php${PHP_VERSION}-mysql \
     && rm -rf /var/lib/apt/lists/*
 
 # Add Charm APT repository and install gum for interactive prompts
@@ -56,6 +70,11 @@ COPY hooks/ /opt/ddev-claude/hooks/
 COPY bin/ /opt/ddev-claude/bin/
 RUN chmod +x /opt/ddev-claude/hooks/* /opt/ddev-claude/bin/* \
     && ln -sf /opt/ddev-claude/bin/ddev /usr/local/bin/ddev
+
+# The project is also mounted at /var/www/html (see docker-compose.claude.yaml)
+# so project binaries like drush resolve without a path prefix. Appended, not
+# prepended, so repository-shipped binaries cannot shadow system commands.
+ENV PATH="${PATH}:/var/www/html/vendor/bin"
 
 # Default command (will be overridden by entrypoint)
 CMD ["tail", "-f", "/dev/null"]

@@ -4,6 +4,10 @@ services:
     build:
       context: claude
       dockerfile: Dockerfile.claude
+      args:
+        # Match the web container's PHP version (fallback for older DDEV
+        # versions that do not provide DDEV_PHP_VERSION to compose files).
+        PHP_VERSION: ${DDEV_PHP_VERSION:-8.3}
     container_name: ddev-${DDEV_SITENAME}-claude
 
     cap_add:
@@ -31,7 +35,15 @@ services:
         source: ${DDEV_APPROOT}
         target: ${DDEV_APPROOT}
         consistency: cached
-      # Mask project env files inside claude container
+      # Also mount the project at the web container's canonical path so drush
+      # site aliases (root: /var/www/html/web) resolve here too, and absolute
+      # paths baked into caches shared through the database stay consistent
+      # with the web container.
+      - type: bind
+        source: ${DDEV_APPROOT}
+        target: /var/www/html
+        consistency: cached
+      # Mask project env files inside claude container (both mount points)
       - type: bind
         source: ${DDEV_APPROOT}/.ddev/claude/config/empty.env
         target: ${DDEV_APPROOT}/.env
@@ -39,6 +51,14 @@ services:
       - type: bind
         source: ${DDEV_APPROOT}/.ddev/claude/config/empty.env
         target: ${DDEV_APPROOT}/.ddev/.env
+        read_only: true
+      - type: bind
+        source: ${DDEV_APPROOT}/.ddev/claude/config/empty.env
+        target: /var/www/html/.env
+        read_only: true
+      - type: bind
+        source: ${DDEV_APPROOT}/.ddev/claude/config/empty.env
+        target: /var/www/html/.ddev/.env
         read_only: true
       - ~/.claude:/root/.claude:rw
       - ~/.claude.json:/root/.claude.json:rw
@@ -60,6 +80,9 @@ services:
       # Make Drupal's settings.php include settings.ddev.php (DB credentials
       # etc.) so drush and other CLI tools work inside this container.
       - IS_DDEV_PROJECT=true
+      # DDEV-standard variable inside containers: lets settings files and CLI
+      # tools distinguish in-container execution from drush on the host.
+      - DDEV_PHP_VERSION=${DDEV_PHP_VERSION:-8.3}
       - CLAUDE_USER=claude
       - CLAUDE_HOME=/home/claude
 

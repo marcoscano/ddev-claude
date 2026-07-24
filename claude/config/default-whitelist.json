@@ -1,4 +1,5 @@
 [
+  "db",
   "api.anthropic.com",
   "claude.ai",
   "statsig.anthropic.com",
