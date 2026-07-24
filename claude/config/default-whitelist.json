@@ -1,5 +1,6 @@
 [
   "db",
+  "memcached",
   "api.anthropic.com",
   "claude.ai",
   "statsig.anthropic.com",

@@ -41,6 +41,9 @@ RUN curl -fsSL https://packages.sury.org/php/apt.gpg -o /usr/share/keyrings/deb.
     php${PHP_VERSION}-bcmath \
     # Required so drush can reach the DDEV database from this container.
     php${PHP_VERSION}-mysql \
+    # Required when the project uses the memcached cache backend (DDEV
+    # memcached service); harmless otherwise.
+    php${PHP_VERSION}-memcached \
     && rm -rf /var/lib/apt/lists/*
 
 # Add Charm APT repository and install gum for interactive prompts
