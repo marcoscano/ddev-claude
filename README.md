@@ -50,6 +50,17 @@ This fork ([marcoscano/ddev-claude](https://github.com/marcoscano/ddev-claude)) 
    `default-whitelist.json`, the file `merge-whitelist.sh` actually reads
    -- it had been added to `whitelist-domains.txt`, a vestigial file the
    firewall never consumes (now removed).
+9. **Remote browser piloting via playwright-cli** -- the image ships a
+   pinned `@playwright/cli` client (no browsers). A project can run a
+   Playwright browser server inside its web container (a
+   `chromium.launchServer()` script under `web_extra_daemons`) and
+   whitelist `web`; the sandbox then drives that real browser with
+   `playwright-cli attach --endpoint ws://web:<port>/<path>`. The browser
+   keeps the web container's DNS/TLS context, no exec bridge into the web
+   container is needed, and launch options stay pinned server-side
+   (`launchServer()` rather than `run-server --unsafe`, which would let
+   clients run arbitrary executables). Client and server must share the
+   same playwright-core version -- upgrade them together.
 
 To switch a project from upstream to this fork, remove the old install first
 and delete anything left behind -- DDEV never removes or overwrites files

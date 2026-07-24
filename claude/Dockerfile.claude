@@ -60,6 +60,12 @@ RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local
 # Install Claude CLI
 RUN npm install -g @anthropic-ai/claude-code
 
+# Install Playwright CLI as a thin client (no browsers): it pilots a browser
+# server that projects may run in the web container and expose over the
+# docker network. Pinned because the playwright protocol requires client and
+# server to share the same playwright-core version -- upgrade both together.
+RUN npm install -g @playwright/cli@0.1.17
+
 # Create a non-root runtime user for Claude CLI execution.
 RUN useradd -m -s /bin/bash claude \
     && mkdir -p /home/claude/.claude \
