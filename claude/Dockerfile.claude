@@ -13,6 +13,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     wget \
     unzip \
+    # MySQL CLI client, required by drush sql:* commands.
+    default-mysql-client \
     ca-certificates \
     gnupg \
     # Firewall tools
