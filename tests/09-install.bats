@@ -24,3 +24,8 @@ teardown() {
   run grep -F 'mkdir -p ~/.config/git' "$REPO_ROOT/install.yaml"
   [ "$status" -eq 0 ]
 }
+
+@test "install.yaml declares the Lullabot/ddev-gitleaks add-on dependency" {
+  run grep -F -- '- Lullabot/ddev-gitleaks' "$REPO_ROOT/install.yaml"
+  [ "$status" -eq 0 ]
+}

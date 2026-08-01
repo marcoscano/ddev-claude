@@ -40,7 +40,7 @@ make test-integration    # Integration tests (requires DDEV environment)
 **Key components:**
 
 - `docker-compose.claude.yaml` — Service definition. Mounts project at `${DDEV_APPROOT}` (real host path, not `/var/www/html`). Masks `.env` and `.ddev/.env` with empty file. Requires NET_ADMIN + NET_RAW capabilities.
-- `install.yaml` — DDEV addon manifest. Copies `claude/` dir and host commands into `.ddev/`.
+- `install.yaml` — DDEV addon manifest. Copies `claude/` dir and host commands into `.ddev/`. Declares a dependency on `Lullabot/ddev-gitleaks` (DDEV installs it automatically for non-blocking secret scanning of the container env and project `.env` files).
 - `claude/Dockerfile.claude` — Builds on `debian:bookworm-slim`. Installs PHP, Node.js, Composer, iptables, ipset, jq, gum, Claude CLI. Creates symlink for ddev shim.
 - `claude/bin/ddev` — ddev command shim. Auto-forwards runtime commands (php, composer, node, npm) to local runtime. Blocks lifecycle commands (start, restart, exec) with helpful hints.
 - `claude/config/empty.env` — Empty file mounted over project `.env` and `.ddev/.env` to prevent Claude from accessing secrets.

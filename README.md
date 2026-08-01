@@ -61,6 +61,16 @@ This fork ([marcoscano/ddev-claude](https://github.com/marcoscano/ddev-claude)) 
    (`launchServer()` rather than `run-server --unsafe`, which would let
    clients run arbitrary executables). Client and server must share the
    same playwright-core version -- upgrade them together.
+10. **Secret scanning via Lullabot/ddev-gitleaks** -- `install.yaml` declares
+    [Lullabot/ddev-gitleaks](https://github.com/Lullabot/ddev-gitleaks) as an
+    add-on dependency, so DDEV installs it automatically alongside this
+    add-on. It runs a non-blocking post-start scan of the container
+    environment and project `.env` files, warning (with redacted values) when
+    likely secrets or API keys are present. This complements the `.env`
+    masking: the mask hides secrets from the claude container, the scan tells
+    you they exist at all -- e.g. a secret set in global `web_environment`,
+    which DDEV propagates into every project. It never blocks `ddev start`.
+    (Ported from [e0ipso/ddev-assistant-claude#14](https://github.com/e0ipso/ddev-assistant-claude/pull/14).)
 
 To switch a project from upstream to this fork, remove the old install first
 and delete anything left behind -- DDEV never removes or overwrites files
