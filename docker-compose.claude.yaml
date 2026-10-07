@@ -61,9 +61,8 @@ services:
         target: /var/www/html/.ddev/.env
         read_only: true
       - ~/.claude:/root/.claude:rw
-      - ~/.claude.json:/root/.claude.json:rw
       - ~/.claude:/home/claude/.claude:rw
-      - ~/.claude.json:/home/claude/.claude.json:rw
+      - ${HOME}/.claude:${HOME}/.claude:rw 
       # Keep host-absolute plugin install paths valid inside container
       - ${HOME}/.claude:${HOME}/.claude:rw
       # Git identity for commits inside container
@@ -85,6 +84,7 @@ services:
       - DDEV_PHP_VERSION=${DDEV_PHP_VERSION:-8.3}
       - CLAUDE_USER=claude
       - CLAUDE_HOME=/home/claude
+      - CLAUDE_CONFIG_DIR=/home/claude/.claude
 
     networks:
       - default
