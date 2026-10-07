@@ -1,4 +1,3 @@
-#ddev-generated
 services:
   claude:
     build:
@@ -85,6 +84,8 @@ services:
       - CLAUDE_USER=claude
       - CLAUDE_HOME=/home/claude
       - CLAUDE_CONFIG_DIR=/home/claude/.claude
+      - TERM=xterm-256color
+      - COLORTERM=truecolor
 
     networks:
       - default
