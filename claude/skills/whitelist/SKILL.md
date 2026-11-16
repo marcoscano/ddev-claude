@@ -104,6 +104,18 @@ jq -s 'add | unique' \
   mv /tmp/merged.json $DDEV_APPROOT/.ddev/ddev-claude/whitelist.json
 ```
 
+## IP Addresses and CIDR Ranges
+
+Whitelist files also accept IPv4 addresses and CIDR ranges (`/8` to `/32`), for example `"198.51.100.0/24"`. Suggest a range when a whitelisted domain only works intermittently: the service probably rotates a single DNS record across a pool of IPs, and the firewall only knows the one it resolved last.
+
+`add-domain` only accepts domain names. After user approval, add the range to the project config, writing the file in place so the watcher sees the change:
+
+```bash
+jq '. + ["198.51.100.0/24"] | unique' \
+  $DDEV_APPROOT/.ddev/ddev-claude/whitelist.json > /tmp/whitelist.json && \
+  cat /tmp/whitelist.json > $DDEV_APPROOT/.ddev/ddev-claude/whitelist.json
+```
+
 ## Wildcard Domains
 
 Wildcards are supported: `*.example.com` matches all subdomains.

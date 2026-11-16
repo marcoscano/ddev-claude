@@ -11,6 +11,10 @@ warn() { echo "$LOG_PREFIX WARNING: $*" >&2; }
 total_ips=0
 failed_domains=()
 
+# IPv4 address with an optional /8 to /32 prefix.
+OCTET='(25[0-5]|2[0-4][0-9]|1?[0-9]?[0-9])'
+IP_OR_RANGE="^${OCTET}(\.${OCTET}){3}(/([89]|[12][0-9]|3[0-2]))?$"
+
 if [[ ! -f "$WHITELIST_FILE" ]]; then
   warn "Whitelist file not found: $WHITELIST_FILE"
   exit 0  # Don't fail - just no domains to whitelist
@@ -22,6 +26,20 @@ while IFS= read -r domain || [[ -n "$domain" ]]; do
 
   # Trim whitespace
   domain=$(echo "$domain" | xargs)
+
+  # IPv4 addresses and CIDR ranges are whitelisted as-is, without DNS. Ranges
+  # cover hosts that publish a single, rotating A record (api.github.com): the
+  # one IP resolved here goes stale as soon as DNS hands out the next one.
+  if [[ "$domain" =~ ^[0-9./]+$ ]]; then
+    if [[ "$domain" =~ $IP_OR_RANGE ]] \
+      && ipset add -exist whitelist_ips "$domain" timeout 3600; then
+      log "Whitelisted: $domain"
+      ((++total_ips))
+    else
+      warn "Invalid IP address or range $domain, expected IPv4 with an optional /8 to /32 prefix (skipping)"
+    fi
+    continue
+  fi
 
   # Resolve domain with retries
   ips=$(dig +short +time=2 +tries=3 A "$domain" 2>/dev/null | grep -E '^[0-9]+\.' || true)

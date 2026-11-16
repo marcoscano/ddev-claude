@@ -81,6 +81,44 @@ EOF
   [ "$output" -ge 1 ]
 }
 
+@test "resolve-and-apply whitelists IP addresses and CIDR ranges without DNS" {
+  mock_cmd dig <<'EOF'
+#!/usr/bin/env bash
+echo "${*: -1}" >> "$TEST_TMPDIR/dig-calls.log"
+EOF
+  mock_cmd ipset <<'EOF'
+#!/usr/bin/env bash
+echo "$*" >> /tmp/ipset-calls.log
+exit 0
+EOF
+
+  whitelist_file="$TEST_TMPDIR/domains.txt"
+  cat > "$whitelist_file" <<'EOF'
+192.0.2.0/24
+203.0.113.7
+10.0.0.0/4
+999.1.1.1
+EOF
+
+  run bash "$REPO_ROOT/claude/resolve-and-apply.sh" "$whitelist_file"
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Whitelisted: 192.0.2.0/24"* ]]
+  [[ "$output" == *"Whitelisted: 203.0.113.7"* ]]
+  [[ "$output" == *"Invalid IP address or range 10.0.0.0/4"* ]]
+  [[ "$output" == *"Invalid IP address or range 999.1.1.1"* ]]
+  run grep -c '^add -exist whitelist_ips 192.0.2.0/24 timeout 3600$' /tmp/ipset-calls.log
+  [ "$status" -eq 0 ]
+  [ "$output" -eq 1 ]
+  run grep -c '^add -exist whitelist_ips 203.0.113.7 timeout 3600$' /tmp/ipset-calls.log
+  [ "$status" -eq 0 ]
+  [ "$output" -eq 1 ]
+  # Invalid entries never reach ipset, and nothing here is sent to DNS.
+  run grep -cE '10\.0\.0\.0/4|999\.1\.1\.1' /tmp/ipset-calls.log
+  [ "$output" -eq 0 ]
+  [ ! -e "$TEST_TMPDIR/dig-calls.log" ]
+}
+
 @test "reload-whitelist flushes ipset and reapplies merged domains" {
   mock_cmd ipset <<'EOF'
 #!/usr/bin/env bash
@@ -106,6 +144,10 @@ EOF
   run grep -c '^flush whitelist_ips$' /tmp/ipset-calls.log
   [ "$status" -eq 0 ]
   [ "$output" -ge 1 ]
+  # The CIDR range in the default whitelist passes validation and is applied.
+  run grep -c '^add -exist whitelist_ips 140.82.112.0/20 timeout 3600$' /tmp/ipset-calls.log
+  [ "$status" -eq 0 ]
+  [ "$output" -eq 1 ]
 }
 
 @test "check-secrets warns when denied files are found" {

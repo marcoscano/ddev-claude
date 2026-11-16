@@ -23,9 +23,9 @@ if [[ -z "$merged" ]]; then
     log "WARNING: No domains in merged whitelist"
 fi
 
-# Validate merged output (should be one domain per line)
-# Allow: alphanumeric, dots, hyphens, asterisks (wildcards)
-if echo "$merged" | grep -qE '[^a-zA-Z0-9.\-*]'; then
+# Validate merged output (should be one domain, IP or CIDR range per line)
+# Allow: alphanumeric, dots, hyphens, asterisks (wildcards), slashes (CIDR)
+if echo "$merged" | grep -qE '[^a-zA-Z0-9./*-]'; then
     error "Invalid characters in merged whitelist"
     exit 1
 fi

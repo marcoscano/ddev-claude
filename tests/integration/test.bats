@@ -75,6 +75,16 @@ teardown_file() {
   [ "$status" -ne 0 ]
 }
 
+@test "whitelisted IP ranges are loaded into the ipset" {
+  cd "$TESTDIR"
+  # The default whitelist ships GitHub's range. The hash:net set keeps it as
+  # one entry instead of one entry per address.
+  run ddev exec -s claude ipset list whitelist_ips
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Type: hash:net"* ]]
+  [[ "$output" == *"140.82.112.0/20 timeout"* ]]
+}
+
 @test "DNS resolution works" {
   cd "$TESTDIR"
   run ddev exec -s claude dig +short api.anthropic.com

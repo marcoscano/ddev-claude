@@ -28,8 +28,9 @@ log "Initialized blocked request log at $BLOCKED_LOG"
 iptables -F OUTPUT 2>/dev/null || true
 iptables -P OUTPUT ACCEPT  # Temporarily allow while setting up
 
-# 2. Create ipset (use -exist for idempotency)
-ipset create -exist whitelist_ips hash:ip timeout 3600
+# 2. Create ipset (use -exist for idempotency). hash:net stores single IPs
+# (as /32) and CIDR ranges alike, one entry each.
+ipset create -exist whitelist_ips hash:net timeout 3600
 log "Created ipset 'whitelist_ips'"
 
 # 3. Allow loopback (critical for localhost communication)

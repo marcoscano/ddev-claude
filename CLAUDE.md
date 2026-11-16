@@ -45,7 +45,7 @@ make test-integration    # Integration tests (requires DDEV environment)
 - `claude/bin/ddev` — ddev command shim. Auto-forwards runtime commands (php, composer, node, npm) to local runtime. Blocks lifecycle commands (start, restart, exec) with helpful hints.
 - `claude/config/empty.env` — Empty file mounted over project `.env` and `.ddev/.env` to prevent Claude from accessing secrets.
 - `claude/entrypoint.sh` — Firewall initialization. Rule order matters: loopback → DNS → established → whitelisted IPs → log → DROP.
-- `claude/resolve-and-apply.sh` — Resolves domains to IPs via `dig` and adds to ipset.
+- `claude/resolve-and-apply.sh` — Resolves domains to IPs via `dig` and adds to ipset. IPv4 addresses and CIDR ranges are added as-is.
 - `claude/scripts/merge-whitelist.sh` — 3-tier config merge (default + global + per-project).
 - `claude/scripts/watch-config.sh` — inotify watcher for hot reload on whitelist changes (2s debounce).
 - `claude/scripts/reload-whitelist.sh` — Flushes ipset and re-resolves on config change.
@@ -64,7 +64,7 @@ Stack templates in `claude/config/stack-templates/` (laravel.json, npm.json).
 - **Language:** All scripts are Bash. Use `set -euo pipefail` in every script.
 - **Logging:** `LOG_PREFIX="[ddev-claude]"` with `log()` and `error()` helper functions.
 - **DDEV marker:** Files managed by DDEV start with `#ddev-generated` comment.
-- **JSON whitelist format:** Simple arrays: `["domain1.com", "domain2.com"]`. Validated with `jq empty`.
+- **JSON whitelist format:** Simple arrays: `["domain1.com", "domain2.com"]`. Entries are domain names, IPv4 addresses or CIDR ranges (`/8` to `/32`). Validated with `jq empty`.
 - **Error handling:** Entrypoint uses `trap ... ERR` to fail closed if firewall setup fails.
 - **Test naming:** Bats test files are numbered: `tests/XX-<component>.bats` (e.g., `01-firewall.bats`).
 

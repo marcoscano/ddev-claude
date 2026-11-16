@@ -50,6 +50,10 @@ EOF
   run grep -c 'watch-config.sh' /tmp/entrypoint-script-calls.log
   [ "$status" -eq 0 ]
   [ "$output" -ge 1 ]
+  # hash:net, so whitelisted CIDR ranges are stored as single entries.
+  run grep -c '^create -exist whitelist_ips hash:net timeout 3600$' /tmp/entrypoint-ipset.log
+  [ "$status" -eq 0 ]
+  [ "$output" -eq 1 ]
 }
 
 @test "format-block-message prints friendly blocked domain output" {

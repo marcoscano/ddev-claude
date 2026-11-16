@@ -71,6 +71,13 @@ This fork ([marcoscano/ddev-claude](https://github.com/marcoscano/ddev-claude)) 
     you they exist at all -- e.g. a secret set in global `web_environment`,
     which DDEV propagates into every project. It never blocks `ddev start`.
     (Ported from [e0ipso/ddev-assistant-claude#14](https://github.com/e0ipso/ddev-assistant-claude/pull/14).)
+11. **IP addresses and CIDR ranges in whitelists** -- hosts that publish a
+    single, rotating A record (`api.github.com`, `github.com`,
+    `codeload.github.com`) failed intermittently: the firewall resolved one
+    IP per reload, DNS handed out the next one seconds later, and connections
+    to it were dropped. Whitelist files now accept IPv4 addresses and CIDR
+    ranges next to domain names, the ipset is `hash:net` so a range is a
+    single entry, and the default whitelist ships GitHub's `140.82.112.0/20`.
 
 To switch a project from upstream to this fork, remove the old install first
 and delete anything left behind -- DDEV never removes or overwrites files
@@ -218,6 +225,18 @@ All three are JSON arrays of domain strings:
 
 Domains are merged and deduplicated automatically. The merged result is resolved to IPs via `dig` and added to an ipset.
 
+### IP Addresses and CIDR Ranges
+
+Whitelist entries can also be IPv4 addresses or CIDR ranges (`/8` to `/32`):
+
+```json
+["api.example.com", "203.0.113.7", "198.51.100.0/24"]
+```
+
+They are added to the ipset as-is, without a DNS lookup. Use a range for a service that publishes a single A record rotating across a pool of addresses: the firewall resolves each domain once per reload, so it only knows the IP that DNS returned at that moment and drops connections to the others. GitHub is the common case, which is why its `140.82.112.0/20` range ships in the default whitelist (GitHub publishes its ranges at `https://api.github.com/meta`).
+
+A range only opens the firewall. The PreToolUse hook still matches URLs by domain name, so keep the domain itself whitelisted too. `add-domain` accepts domain names only; add IPs and ranges by editing a whitelist file.
+
 ### Hot Reload
 
 You do not need to restart DDEV after editing a whitelist file. An inotify watcher detects changes to any `whitelist.json` and reloads the firewall within 2-3 seconds. The watcher validates JSON before applying -- a malformed file is ignored and the previous whitelist stays active.
@@ -238,6 +257,7 @@ The addon ships with these domains pre-whitelisted in `default-whitelist.json`:
 - `raw.githubusercontent.com`
 - `objects.githubusercontent.com`
 - `codeload.github.com`
+- `140.82.112.0/20` (GitHub's IP range, see [IP Addresses and CIDR Ranges](#ip-addresses-and-cidr-ranges))
 
 **Package registries:**
 - `registry.npmjs.org`
@@ -303,7 +323,7 @@ This is usually a firewall block, not an auth issue. The server's outbound HTTP 
 
 ### Domain was whitelisted but still blocked
 
-The addon resolves domains to IP addresses via `dig` at startup and on config reload. If a service uses CDN rotation or returns different IPs over time, the resolved IP may no longer match. Run `ddev restart` to force a full re-resolution of all domains.
+The addon resolves domains to IP addresses via `dig` at startup and on config reload. If a service uses CDN rotation or returns different IPs over time, the resolved IP may no longer match. Run `ddev restart` to force a full re-resolution of all domains. If the same service keeps failing intermittently, whitelist its published IP range instead (see [IP Addresses and CIDR Ranges](#ip-addresses-and-cidr-ranges)).
 
 ### IPv4 only
 
